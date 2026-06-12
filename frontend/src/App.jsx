@@ -1,122 +1,65 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import React, { lazy, Suspense } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './layouts/DashboardLayout';
+
+// Lazy loading components for code splitting
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const DeviceMonitor = lazy(() => import('./pages/DeviceMonitor'));
+const SensorMonitoring = lazy(() => import('./pages/SensorMonitoring'));
+const EventLogs = lazy(() => import('./pages/EventLogs'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const SystemHealth = lazy(() => import('./pages/SystemHealth'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+// Loader during code-split component fetching
+const LazyLoader = () => (
+  <div className="w-full h-[60vh] flex flex-col items-center justify-center">
+    <div className="relative w-16 h-16 flex items-center justify-center">
+      <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-[#4CAF50] animate-spin"></div>
+      <div className="absolute inset-1.5 rounded-full border-b-2 border-l-2 border-[#2E7D32] animate-spin animate-reverse"></div>
+    </div>
+    <p className="mt-4 text-xs text-slate-500 font-bold tracking-widest uppercase animate-pulse">
+      Retrieving Dashboard Node...
+    </p>
+  </div>
+);
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <Suspense fallback={<LazyLoader />}>
+      <Routes>
+        
+        {/* Public Authentication Route */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Protected Dashboard Routes */}
+        <Route 
+          path="/" 
+          element={
+            <ProtectedRoute>
+              <DashboardLayout />
+            </ProtectedRoute>
+          }
         >
-          Count is {count}
-        </button>
-      </section>
+          <Route index element={<Dashboard />} />
+          <Route path="device-monitor" element={<DeviceMonitor />} />
+          <Route path="sensor-monitoring" element={<SensorMonitoring />} />
+          <Route path="event-logs" element={<EventLogs />} />
+          <Route path="analytics" element={<Analytics />} />
+          <Route path="alerts" element={<Alerts />} />
+          <Route path="system-health" element={<SystemHealth />} />
+          <Route path="settings" element={<Settings />} />
+        </Route>
 
-      <div className="ticks"></div>
+        {/* Catch-all Redirect */}
+        <Route path="*" element={<Navigate to="/" replace />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+      </Routes>
+    </Suspense>
+  );
 }
 
-export default App
+export default App;
