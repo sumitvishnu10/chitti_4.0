@@ -37,7 +37,36 @@ const getEvents = async (req, res) => {
   }
 };
 
+// Update Event Status
+const updateEventStatus = async (req, res) => {
+  try {
+    const event = await EventLog.findByIdAndUpdate(
+      req.params.id,
+      { status: req.body.status },
+      { new: true }
+    );
+
+    if (!event) {
+      return res.status(404).json({
+        success: false,
+        message: "Event not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: event,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 module.exports = {
   createEvent,
   getEvents,
+  updateEventStatus,
 };

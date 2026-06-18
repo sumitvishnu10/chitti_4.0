@@ -51,17 +51,9 @@ const mockSensorHistory = [
   { temperature: 28.5, humidity: 62, battery: 84, createdAt: new Date().toISOString() },
 ];
 
-const mockEvents = [
-  { _id: "e1", deviceId: "CHITTI_01", sensor: "PIR", status: "Active", deterrent: "Buzzer + LED Flash", imageUrl: "https://images.unsplash.com/photo-1507666405895-422efe53f00d?w=400&q=80", timestamp: new Date(Date.now() - 60000 * 12).toISOString() },
-  { _id: "e2", deviceId: "CHITTI_01", sensor: "Ultrasonic", status: "Active", deterrent: "Motor Arm Rotation", imageUrl: "https://images.unsplash.com/photo-1484406566174-9da000fda645?w=400&q=80", timestamp: new Date(Date.now() - 60000 * 45).toISOString() },
-  { _id: "e3", deviceId: "CHITTI_01", sensor: "Vibration", status: "Active", deterrent: "Buzzer Sound", imageUrl: "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=400&q=80", timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
-];
+const mockEvents = [];
 
-const mockAlerts = [
-  { _id: "a1", deviceId: "CHITTI_01", type: "WILDLIFE_DETECTED", message: "Wild Boar detected in Sector 3 (Confidence 94%)", severity: "HIGH", status: "UNREAD", createdAt: new Date(Date.now() - 60000 * 5).toISOString() },
-  { _id: "a2", deviceId: "CHITTI_01", type: "BATTERY_LOW", message: "Battery level fell below 20%", severity: "MEDIUM", status: "UNREAD", createdAt: new Date(Date.now() - 3600000).toISOString() },
-  { _id: "a3", deviceId: "CHITTI_01", type: "CAMERA_OFFLINE", message: "ESP32 Camera stream unavailable", severity: "HIGH", status: "UNREAD", createdAt: new Date(Date.now() - 7200000).toISOString() },
-];
+const mockAlerts = [];
 
 const mockAnalytics = {
   totalEvents: 42,
@@ -162,24 +154,51 @@ export const IoTProvider = ({ children }) => {
         console.warn("Failed fetching sensor history from API.");
       }
 
-      // 5. Fetch Events
+      // 5. Fetch Events and Map to Alerts
       try {
         const eData = await eventService.getEvents();
-        if (eData && eData.success && eData.data && eData.data.length > 0) {
-          setEvents(eData.data);
-        }
-      } catch (e) {
-        console.warn("Failed fetching event logs from API.");
-      }
+        if (eData && eData.success && eData.data) {
+          const fetchedEvents = eData.data;
+          setEvents(fetchedEvents);
 
-      // 6. Fetch Alerts
-      try {
-        const aData = await alertService.getAlerts();
-        if (aData && aData.success && aData.data) {
-          setAlerts(aData.data);
+          // Map events to alerts
+          const mappedAlerts = fetchedEvents.map(event => {
+            let message = `${event.sensor} Triggered`;
+            if (event.sensor === 'PIR' && event.status === 'DETECTED') {
+              message = 'PIR Sensor Triggered';
+            } else if (event.sensor === 'ULTRASONIC' && event.status === 'ANIMAL_DETECTED') {
+              message = 'Animal Detected';
+            } else if (event.sensor === 'Vibration') {
+              message = 'Vibration Detected';
+            } else if (event.sensor === 'PIR') {
+              message = 'Motion Detected';
+            }
+
+            return {
+              _id: event._id,
+              deviceId: event.deviceId,
+              type: event.sensor,
+              message: message,
+              severity: "HIGH",
+              status: event.status === 'Resolved' ? 'READ' : 'UNREAD',
+              createdAt: event.timestamp || event.createdAt
+            };
+          });
+
+          // Sort alerts newest first (descending)
+          mappedAlerts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setAlerts(mappedAlerts);
+
+          // Update summary counts based on real data
+          setSummary(prev => ({
+            ...prev,
+            totalEvents: fetchedEvents.length,
+            totalAlerts: mappedAlerts.length,
+            unreadAlerts: mappedAlerts.filter(a => a.status === 'UNREAD').length
+          }));
         }
       } catch (e) {
-        console.warn("Failed fetching alerts list from API.");
+        console.warn("Failed fetching event logs from API:", e);
       }
 
       // 7. Fetch Analytics
@@ -205,9 +224,10 @@ export const IoTProvider = ({ children }) => {
     try {
       // Optimistic update
       setAlerts(prev => prev.map(alert => alert._id === id ? { ...alert, status: "READ" } : alert));
+      setEvents(prev => prev.map(event => event._id === id ? { ...event, status: "Resolved" } : event));
       setSummary(prev => ({ ...prev, unreadAlerts: Math.max(0, prev.unreadAlerts - 1) }));
       
-      await alertService.markAsRead(id);
+      await eventService.updateStatus(id, "Resolved");
     } catch (e) {
       console.error("Failed to mark alert as read:", e);
     }
@@ -215,81 +235,23 @@ export const IoTProvider = ({ children }) => {
 
   // Trigger Mock Live Threat Detections to demonstrate real-time notifications
   const simulateLiveThreat = useCallback(() => {
-    const threats = [
-      { type: "Elephant", sensor: "Ultrasonic", deterrent: "High-Pitch Buzzer", img: "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=400&q=80" },
-      { type: "Wild Boar", sensor: "PIR", deterrent: "Buzzer + Strobe LED", img: "https://images.unsplash.com/photo-1507666405895-422efe53f00d?w=400&q=80" },
-      { type: "Deer", sensor: "Vibration", deterrent: "Buzzer Sound", img: "https://images.unsplash.com/photo-1484406566174-9da000fda645?w=400&q=80" }
-    ];
-    
-    const randomThreat = threats[Math.floor(Math.random() * threats.length)];
-    const confidence = Math.floor(Math.random() * 15) + 81; // 81% to 95%
-    
-    const newEvent = {
-      _id: `mock-event-${Date.now()}`,
-      deviceId: "CHITTI_01",
-      sensor: randomThreat.sensor,
-      status: "Active",
-      deterrent: randomThreat.deterrent,
-      imageUrl: randomThreat.img,
-      timestamp: new Date().toISOString()
-    };
-
-    const newAlert = {
-      _id: `mock-alert-${Date.now()}`,
-      deviceId: "CHITTI_01",
-      type: "WILDLIFE_DETECTED",
-      message: `${randomThreat.type} detected in Field sector (Confidence ${confidence}%)`,
-      severity: "HIGH",
-      status: "UNREAD",
-      createdAt: new Date().toISOString()
-    };
-
-    // Update state instantly for visual effect
-    setEvents(prev => [newEvent, ...prev.slice(0, 19)]);
-    setAlerts(prev => [newAlert, ...prev]);
-    setSummary(prev => ({
-      ...prev,
-      totalEvents: prev.totalEvents + 1,
-      totalAlerts: prev.totalAlerts + 1,
-      unreadAlerts: prev.unreadAlerts + 1
-    }));
-    
-    // Show premium toast alert
-    setToastMessage({
-      title: "🚨 Real-time Threat Alert",
-      message: newAlert.message,
-      type: "DANGER"
-    });
-
-    // Also push to backend if running, in background
-    try {
-      eventService.createEvent(newEvent);
-      alertService.createAlert(newAlert);
-    } catch (e) {
-      // fail silently
-    }
+    // Disabled simulation as real backend integration is now active.
   }, []);
 
-  // Set up 10s auto-refresh
+  // Set up 5s auto-refresh polling for real-time updates
   useEffect(() => {
     if (isAuthenticated) {
       fetchIoTData();
       
       const refreshInterval = setInterval(() => {
         fetchIoTData();
-      }, 10000); // 10 seconds auto refresh
-
-      // Threat simulation every 65 seconds
-      const simulationInterval = setInterval(() => {
-        simulateLiveThreat();
-      }, 65000);
+      }, 5000); // 5 seconds auto refresh for real-time sync
 
       return () => {
         clearInterval(refreshInterval);
-        clearInterval(simulationInterval);
       };
     }
-  }, [isAuthenticated, fetchIoTData, simulateLiveThreat]);
+  }, [isAuthenticated, fetchIoTData]);
 
   return (
     <IoTContext.Provider value={{
