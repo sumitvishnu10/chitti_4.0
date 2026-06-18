@@ -13,6 +13,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Alerts = lazy(() => import('./pages/Alerts'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 const Settings = lazy(() => import('./pages/Settings'));
+const LiveCamera = lazy(() => import('./pages/LiveCamera'));
 
 // Loader during code-split component fetching
 const LazyLoader = () => (
@@ -45,6 +46,7 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="live-camera" element={<LiveCamera />} />
           <Route path="device-monitor" element={<DeviceMonitor />} />
           <Route path="sensor-monitoring" element={<SensorMonitoring />} />
           <Route path="event-logs" element={<EventLogs />} />

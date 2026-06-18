@@ -33,5 +33,6 @@ router.get(
   authorize("admin", "farmer"),
   getDeviceStatus
 );
+router.post("/iot/update", createDevice);
 
 module.exports = router;

@@ -14,7 +14,8 @@ import {
   Zap,
   Battery,
   Shield,
-  X
+  X,
+  Camera
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useIoT } from '../context/IoTContext';
@@ -25,6 +26,7 @@ export const Sidebar = ({ isOpen, toggleSidebar }) => {
 
   const menuItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
+    { name: 'Live Camera', path: '/live-camera', icon: Camera },
     { name: 'Device Monitor', path: '/device-monitor', icon: Cpu },
     { name: 'Sensor Monitoring', path: '/sensor-monitoring', icon: Activity },
     { name: 'Event Logs', path: '/event-logs', icon: FileText },
