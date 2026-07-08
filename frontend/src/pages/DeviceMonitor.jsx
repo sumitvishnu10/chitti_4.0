@@ -263,25 +263,17 @@ export const DeviceMonitor = () => {
               {/* Target grid overlay */}
               <div className="absolute inset-0 tech-grid opacity-20 pointer-events-none"></div>
 
-              {/* Neural Network Bounding Box */}
-              {detectedAnimal && (
-                <div className="absolute border border-red-500 bg-red-500/10 rounded-lg p-1.5 flex flex-col justify-between" style={{ top: '15%', left: '20%', width: '55%', height: '60%' }}>
-                  <div className="bg-red-600 text-[8px] font-black text-white px-1 py-0.5 rounded uppercase self-start shadow-md">
-                    {detectedAnimal} ({confidence}%)
-                  </div>
-                  <div className="w-2 h-2 border-b-2 border-r-2 border-red-500 absolute bottom-0 right-0"></div>
-                  <div className="w-2 h-2 border-t-2 border-l-2 border-red-500 absolute top-0 left-0"></div>
-                </div>
-              )}
+
 
               {/* Scanning lines */}
               <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent pointer-events-none h-4 animate-scan"></div>
 
               {/* Camera Stream frame */}
-              <img 
-                src={cameraImage} 
-                alt="Live stream feed" 
-                className="w-full h-full object-cover"
+              <iframe 
+                src="http://10.198.214.50" 
+                title="Live Camera Stream"
+                className="w-full h-full border-0"
+                allowFullScreen
               />
 
             </div>

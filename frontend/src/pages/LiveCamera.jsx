@@ -31,7 +31,7 @@ export const LiveCamera = () => {
   const [streamStatus, setStreamStatus] = useState('loading'); // 'loading', 'online', 'offline'
   const videoContainerRef = useRef(null);
   
-  const CAMERA_URL = "http://192.168.1.8"; // Default from requirements
+  const CAMERA_URL = "http://10.198.214.50"; // Live camera feed URL
 
   // Check if there is an active motion/object detection for highlighting
   const hasActiveAlert = activeDevice?.pir || activeDevice?.ultrasonic;
@@ -131,11 +131,11 @@ export const LiveCamera = () => {
           >
             {/* Camera Viewport */}
             {streamStatus === 'online' ? (
-              <img 
+              <iframe 
                 src={CAMERA_URL} 
-                alt="Live Camera Stream" 
-                className={`w-full h-full object-cover ${hasActiveAlert ? 'scale-105' : 'scale-100'} transition-transform duration-700`}
-                onError={handleStreamError}
+                title="Live Camera Stream" 
+                className={`w-full h-full border-0 ${hasActiveAlert ? 'scale-105' : 'scale-100'} transition-transform duration-700`}
+                allowFullScreen
               />
             ) : streamStatus === 'loading' ? (
               <div className="flex flex-col items-center gap-4">
