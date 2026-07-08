@@ -49,16 +49,16 @@ export const Settings = () => {
       
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-black text-white tracking-wide">Configuration Parameters</h2>
-        <p className="text-xs text-slate-400 font-semibold tracking-wide">Adjust device boundaries and system notifications triggers</p>
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">Configuration Parameters</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold tracking-wide">Adjust device boundaries and system notifications triggers</p>
       </div>
 
       <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
         {/* Left column: Hardware parameters */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="glass-card rounded-3xl p-6 border border-white/5 space-y-6 shadow-xl">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
+          <div className="glass-card rounded-3xl p-6 border border-slate-200 dark:border-white/5 space-y-6 shadow-xl">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-white/5 pb-3">
               <Sliders className="w-5 h-5 text-[#4CAF50]" />
               Edge Trigger Thresholds
             </h3>
@@ -67,35 +67,35 @@ export const Settings = () => {
               
               {/* Telemetry Polling Rate */}
               <div className="space-y-2">
-                <label className="text-slate-400 font-bold">Telemetry Polling Rate (seconds)</label>
+                <label className="text-slate-700 dark:text-slate-400 font-bold">Telemetry Polling Rate (seconds)</label>
                 <input 
                   type="number" 
                   min="2"
                   max="60"
                   value={pollingRate} 
                   onChange={(e) => setPollingRate(Number(e.target.value))}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 focus:border-[#4CAF50]/50 dark:focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-slate-900 dark:text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono shadow-inner"
                 />
                 <p className="text-[10px] text-slate-500">Speed at which telemetry is fetched from the local broker</p>
               </div>
 
               {/* Ultrasonic Range */}
               <div className="space-y-2">
-                <label className="text-slate-400 font-bold">Ultrasonic Range Trigger Limit (cm)</label>
+                <label className="text-slate-700 dark:text-slate-400 font-bold">Ultrasonic Range Trigger Limit (cm)</label>
                 <input 
                   type="number" 
                   min="20"
                   max="500"
                   value={rangeLimit} 
                   onChange={(e) => setRangeLimit(Number(e.target.value))}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 focus:border-[#4CAF50]/50 dark:focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-slate-900 dark:text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono shadow-inner"
                 />
                 <p className="text-[10px] text-slate-500">Trigger scare actions if crop proximity falls below this value</p>
               </div>
 
               {/* Vibration Threshold */}
               <div className="space-y-2">
-                <label className="text-slate-400 font-bold">Soil Vibration Threshold (Hz)</label>
+                <label className="text-slate-700 dark:text-slate-400 font-bold">Soil Vibration Threshold (Hz)</label>
                 <input 
                   type="number" 
                   step="0.1"
@@ -103,21 +103,21 @@ export const Settings = () => {
                   max="10"
                   value={vibeThreshold} 
                   onChange={(e) => setVibeThreshold(Number(e.target.value))}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 focus:border-[#4CAF50]/50 dark:focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-slate-900 dark:text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono shadow-inner"
                 />
                 <p className="text-[10px] text-slate-500">Intrusion flag limit for soil seismic activity</p>
               </div>
 
               {/* Battery Warn Limit */}
               <div className="space-y-2">
-                <label className="text-slate-400 font-bold">Battery Critical Limit Warning (%)</label>
+                <label className="text-slate-700 dark:text-slate-400 font-bold">Battery Critical Limit Warning (%)</label>
                 <input 
                   type="number" 
                   min="5"
                   max="50"
                   value={batLimit} 
                   onChange={(e) => setBatLimit(Number(e.target.value))}
-                  className="w-full px-4 py-2.5 bg-slate-900 border border-white/5 focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-white/5 focus:border-[#4CAF50]/50 dark:focus:border-[#4CAF50]/30 rounded-xl focus:outline-none text-slate-900 dark:text-white text-sm focus:ring-1 focus:ring-[#4CAF50]/30 transition-all font-mono shadow-inner"
                 />
                 <p className="text-[10px] text-slate-500">Sends alerts when solar battery bank drops under this</p>
               </div>
@@ -128,8 +128,8 @@ export const Settings = () => {
 
         {/* Right column: Actuators controls */}
         <div className="space-y-6">
-          <div className="glass-card rounded-3xl p-6 border border-white/5 space-y-6 shadow-xl">
-            <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2 border-b border-white/5 pb-3">
+          <div className="glass-card rounded-3xl p-6 border border-slate-200 dark:border-white/5 space-y-6 shadow-xl">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2 border-b border-slate-200 dark:border-white/5 pb-3">
               <Volume2 className="w-5 h-5 text-[#4CAF50]" />
               Edge Deterrent Toggles
             </h3>
@@ -137,65 +137,65 @@ export const Settings = () => {
             <div className="space-y-4 text-xs font-semibold">
               
               {/* Buzzer */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-900/40 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between p-3.5 bg-slate-100 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
                 <div>
-                  <p className="text-white">Audible Buzzer Sounder</p>
-                  <p className="text-[10px] text-slate-400 font-normal">Triggers high pitch acoustic deterrence</p>
+                  <p className="text-slate-900 dark:text-white">Audible Buzzer Sounder</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Triggers high pitch acoustic deterrence</p>
                 </div>
                 <input 
                   type="checkbox" 
                   checked={buzzerEnabled}
                   onChange={(e) => setBuzzerEnabled(e.target.checked)}
-                  className="w-5 h-5 text-[#2E7D32] border-white/5 focus:ring-0 rounded-lg cursor-pointer"
+                  className="w-5 h-5 text-[#2E7D32] border-slate-300 dark:border-white/5 focus:ring-0 rounded-lg cursor-pointer bg-white dark:bg-slate-800"
                 />
               </div>
 
               {/* LED Flash */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-900/40 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between p-3.5 bg-slate-100 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
                 <div>
-                  <p className="text-white">LED Flash Strobe</p>
-                  <p className="text-[10px] text-slate-400 font-normal">Emits visual flash triggers during dark cycles</p>
+                  <p className="text-slate-900 dark:text-white">LED Flash Strobe</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Emits visual flash triggers during dark cycles</p>
                 </div>
                 <input 
                   type="checkbox" 
                   checked={ledEnabled}
                   onChange={(e) => setLedEnabled(e.target.checked)}
-                  className="w-5 h-5 text-[#2E7D32] border-white/5 focus:ring-0 rounded-lg cursor-pointer"
+                  className="w-5 h-5 text-[#2E7D32] border-slate-300 dark:border-white/5 focus:ring-0 rounded-lg cursor-pointer bg-white dark:bg-slate-800"
                 />
               </div>
 
               {/* Motor Rotator */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-900/40 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between p-3.5 bg-slate-100 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
                 <div>
-                  <p className="text-white">Deterrent Motor Rotator</p>
-                  <p className="text-[10px] text-slate-400 font-normal">Activates physical spin arms for deterrent motion</p>
+                  <p className="text-slate-900 dark:text-white">Deterrent Motor Rotator</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Activates physical spin arms for deterrent motion</p>
                 </div>
                 <input 
                   type="checkbox" 
                   checked={motorEnabled}
                   onChange={(e) => setMotorEnabled(e.target.checked)}
-                  className="w-5 h-5 text-[#2E7D32] border-white/5 focus:ring-0 rounded-lg cursor-pointer"
+                  className="w-5 h-5 text-[#2E7D32] border-slate-300 dark:border-white/5 focus:ring-0 rounded-lg cursor-pointer bg-white dark:bg-slate-800"
                 />
               </div>
 
               {/* Notification Toggles */}
-              <div className="flex items-center justify-between p-3.5 bg-slate-900/40 rounded-2xl border border-white/5">
+              <div className="flex items-center justify-between p-3.5 bg-slate-100 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-white/5 shadow-sm">
                 <div>
-                  <p className="text-white">Push Alert Broadcast</p>
-                  <p className="text-[10px] text-slate-400 font-normal">Dispatches real-time pop-ups on operator terminal</p>
+                  <p className="text-slate-900 dark:text-white">Push Alert Broadcast</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">Dispatches real-time pop-ups on operator terminal</p>
                 </div>
                 <input 
                   type="checkbox" 
                   checked={notifyApp}
                   onChange={(e) => setNotifyApp(e.target.checked)}
-                  className="w-5 h-5 text-[#2E7D32] border-white/5 focus:ring-0 rounded-lg cursor-pointer"
+                  className="w-5 h-5 text-[#2E7D32] border-slate-300 dark:border-white/5 focus:ring-0 rounded-lg cursor-pointer bg-white dark:bg-slate-800"
                 />
               </div>
 
             </div>
 
             {/* Save Button */}
-            <div className="pt-2 border-t border-white/5 flex flex-col gap-3">
+            <div className="pt-2 border-t border-slate-200 dark:border-white/5 flex flex-col gap-3">
               <button
                 type="submit"
                 disabled={saving}
@@ -212,7 +212,7 @@ export const Settings = () => {
               </button>
 
               {saveSuccess && (
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold flex items-center gap-1.5 justify-center">
+                <div className="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1.5 justify-center">
                   <ShieldCheck className="w-4 h-4" />
                   <span>Thresholds Dispatched to ESP32 Node!</span>
                 </div>

@@ -10,7 +10,7 @@ const DeviceMonitor = lazy(() => import('./pages/DeviceMonitor'));
 const SensorMonitoring = lazy(() => import('./pages/SensorMonitoring'));
 const EventLogs = lazy(() => import('./pages/EventLogs'));
 const Analytics = lazy(() => import('./pages/Analytics'));
-const Alerts = lazy(() => import('./pages/Alerts'));
+const Notifications = lazy(() => import('./pages/Notifications'));
 const SystemHealth = lazy(() => import('./pages/SystemHealth'));
 const Settings = lazy(() => import('./pages/Settings'));
 const LiveCamera = lazy(() => import('./pages/LiveCamera'));
@@ -51,7 +51,7 @@ function App() {
           <Route path="sensor-monitoring" element={<SensorMonitoring />} />
           <Route path="event-logs" element={<EventLogs />} />
           <Route path="analytics" element={<Analytics />} />
-          <Route path="alerts" element={<Alerts />} />
+          <Route path="notifications" element={<Notifications />} />
           <Route path="system-health" element={<SystemHealth />} />
           <Route path="settings" element={<Settings />} />
         </Route>

@@ -40,9 +40,14 @@ const getEvents = async (req, res) => {
 // Update Event Status
 const updateEventStatus = async (req, res) => {
   try {
+    const updateData = { status: req.body.status };
+    if (req.body.imageUrl) {
+      updateData.imageUrl = req.body.imageUrl;
+    }
+
     const event = await EventLog.findByIdAndUpdate(
       req.params.id,
-      { status: req.body.status },
+      updateData,
       { new: true }
     );
 

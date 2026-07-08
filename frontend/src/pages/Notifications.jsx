@@ -11,7 +11,7 @@ import {
   Clock
 } from 'lucide-react';
 
-export const Alerts = () => {
+export const Notifications = () => {
   const { alerts, markAlertRead } = useIoT();
   const [severityFilter, setSeverityFilter] = useState('ALL');
   const [statusFilter, setStatusFilter] = useState('ALL');
@@ -45,8 +45,8 @@ export const Alerts = () => {
       
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-black text-white tracking-wide">Alarms & Notifications Ticker</h2>
-        <p className="text-xs text-slate-400 font-semibold tracking-wide">Intrusion signals and sensor health notifications</p>
+        <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-wide">System Notifications</h2>
+        <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold tracking-wide">Intrusion signals and sensor health notifications</p>
       </div>
 
       {/* Filters Toolbar */}
@@ -55,15 +55,15 @@ export const Alerts = () => {
         {/* Severity filter */}
         <div className="flex items-center gap-2 text-xs w-full sm:w-auto">
           <Filter className="w-4 h-4 text-slate-500" />
-          <span className="text-slate-400 font-medium whitespace-nowrap">Severity:</span>
+          <span className="text-slate-600 dark:text-slate-400 font-medium whitespace-nowrap">Severity:</span>
           <div className="flex gap-1.5 overflow-x-auto">
             {['ALL', 'HIGH', 'MEDIUM'].map((sev) => (
               <button
                 key={sev}
                 onClick={() => setSeverityFilter(sev)}
-                className={`px-3 py-1.5 rounded-lg font-bold border transition-all cursor-pointer ${severityFilter === sev ? 'bg-[#2E7D32] border-[#4CAF50]/30 text-white' : 'bg-slate-900 border-white/5 text-slate-400 hover:text-white'}`}
+                className={`px-3 py-1.5 rounded-lg font-bold border transition-all cursor-pointer ${severityFilter === sev ? 'bg-emerald-600 border-emerald-500/30 text-white' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-white/5 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'}`}
               >
-                {sev === 'ALL' ? 'All Alerts' : `${sev} Severity`}
+                {sev === 'ALL' ? 'All Notifications' : `${sev} Severity`}
               </button>
             ))}
           </div>
@@ -71,11 +71,11 @@ export const Alerts = () => {
 
         {/* Status filter */}
         <div className="flex items-center gap-2.5 text-xs w-full sm:w-auto">
-          <span className="text-slate-400 font-medium">Resolution Status:</span>
+          <span className="text-slate-600 dark:text-slate-400 font-medium">Resolution Status:</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-900 border border-white/5 focus:border-[#4CAF50]/30 rounded-xl text-white outline-none focus:ring-1 focus:ring-[#4CAF50]/30 transition-all cursor-pointer"
+            className="px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 focus:border-emerald-500/50 dark:focus:border-[#4CAF50]/30 rounded-xl text-slate-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500/30 transition-all cursor-pointer"
           >
             <option value="ALL">Show All</option>
             <option value="UNREAD">Unresolved</option>
@@ -88,15 +88,15 @@ export const Alerts = () => {
       {/* Alerts Feed */}
       <div className="space-y-4">
         {filteredAlerts.length === 0 ? (
-          <div className="glass-card rounded-3xl p-10 border border-white/5 text-center text-slate-500 text-sm">
-            <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3" />
-            <span>No warnings detected in this log query. All sectors cleared.</span>
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-10 border border-slate-200 dark:border-white/5 text-center text-slate-500 text-sm shadow-sm">
+            <CheckCircle className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+            <span>No notifications match your filters.</span>
           </div>
         ) : (
           filteredAlerts.map((alert) => (
             <div 
               key={alert._id} 
-              className={`glass-card rounded-3xl p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all hover:bg-slate-900/10 ${alert.status === 'UNREAD' ? 'border-red-500/25 bg-red-500/5 shadow-[0_0_15px_rgba(239,68,68,0.03)]' : 'border-white/5'}`}
+              className={`bg-white dark:bg-slate-900 rounded-3xl p-5 border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all hover:bg-slate-50 dark:hover:bg-slate-900/40 shadow-sm ${alert.status === 'UNREAD' ? 'border-rose-500/25 bg-rose-50/50 dark:bg-rose-500/5' : 'border-slate-200 dark:border-white/5'}`}
             >
               
               <div className="flex items-center gap-4">
@@ -138,4 +138,4 @@ export const Alerts = () => {
   );
 };
 
-export default Alerts;
+export default Notifications;

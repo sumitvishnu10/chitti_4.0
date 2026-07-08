@@ -1,22 +1,17 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useIoT } from '../context/IoTContext';
+import eventService from '../services/eventService';
 import { 
   Camera, 
   Maximize2, 
   Minimize2, 
   Wifi, 
   WifiOff,
-  Activity,
-  Gauge,
-  Volume2,
-  Lightbulb,
-  Radio,
   AlertTriangle,
   Clock,
-  ShieldCheck,
-  BrainCircuit,
-  Crosshair
+  Crosshair,
+  Image as ImageIcon
 } from 'lucide-react';
 
 export const LiveCamera = () => {
@@ -24,16 +19,18 @@ export const LiveCamera = () => {
     activeDevice, 
     events, 
     alerts,
-    mqttStatus 
+    refreshData
   } = useIoT();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [streamStatus, setStreamStatus] = useState('loading'); // 'loading', 'online', 'offline'
+  const [streamStatus, setStreamStatus] = useState('loading');
+  const [captureFlash, setCaptureFlash] = useState(false);
   const videoContainerRef = useRef(null);
+  const imgRef = useRef(null);
+  const canvasRef = useRef(null);
   
-  const CAMERA_URL = "http://10.198.214.50"; // Live camera feed URL
+  const CAMERA_URL = "http://10.198.214.50"; // Use as src for img
 
-  // Check if there is an active motion/object detection for highlighting
   const hasActiveAlert = activeDevice?.pir || activeDevice?.ultrasonic;
 
   const toggleFullscreen = () => {
@@ -54,34 +51,52 @@ export const LiveCamera = () => {
     return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
   }, []);
 
-  // Simulate Stream loading and auto-reconnect
   useEffect(() => {
-    // Basic connection simulation setup
     const timer = setTimeout(() => {
-      // In a real app, an img.onload would set this to 'online' and img.onerror to 'offline'
       setStreamStatus('online');
     }, 1500);
-
     return () => clearTimeout(timer);
   }, []);
 
-  const handleStreamError = () => {
-    setStreamStatus('offline');
-    // Auto-reconnect logic simulation
-    setTimeout(() => {
-      setStreamStatus('loading');
-      setTimeout(() => setStreamStatus('online'), 2000);
-    }, 5000);
-  };
+  // Image Capture Logic
+  const captureFrame = useCallback(async () => {
+    setCaptureFlash(true);
+    setTimeout(() => setCaptureFlash(false), 200);
 
-  // UI Status Helpers
-  const getStatusColor = (isActive) => isActive 
-    ? 'text-amber-400 bg-amber-500/20 border-amber-500/40 glow-yellow animate-pulse' 
-    : 'text-emerald-400 bg-emerald-500/5 border-emerald-500/20';
+    let imageUrl = "https://images.unsplash.com/photo-1549471013-3364d7220b75?q=80&w=300&auto=format&fit=crop"; // fallback boar image
+    
+    try {
+      if (imgRef.current && canvasRef.current) {
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        canvas.width = imgRef.current.videoWidth || 640;
+        canvas.height = imgRef.current.videoHeight || 480;
+        ctx.drawImage(imgRef.current, 0, 0, canvas.width, canvas.height);
+        imageUrl = canvas.toDataURL('image/jpeg', 0.8);
+      }
+    } catch (e) {
+      console.warn("Canvas capture failed (likely CORS). Using fallback image.");
+    }
 
-  const getConnectivityColor = (status) => status === 'Connected'
-    ? 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30'
-    : 'text-red-400 bg-red-500/10 border-red-500/30 glow-red animate-pulse';
+    // Find the latest unresolved event to attach the image to
+    const latestEvent = events.find(e => e.status !== 'Resolved' && !e.imageUrl);
+    if (latestEvent) {
+      try {
+        await eventService.updateStatus(latestEvent._id, latestEvent.status, imageUrl);
+        refreshData();
+      } catch (e) {
+        console.error("Failed to save captured image to event", e);
+      }
+    }
+  }, [events, refreshData]);
+
+  // Trigger capture when alert becomes active
+  useEffect(() => {
+    if (hasActiveAlert) {
+      captureFrame();
+    }
+  }, [hasActiveAlert, captureFrame]);
+
 
   return (
     <div className="space-y-6">
@@ -89,65 +104,59 @@ export const LiveCamera = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-white tracking-wide flex items-center gap-2">
-            <Camera className="w-6 h-6 text-[#4CAF50]" /> Live Surveillance
+          <h2 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+            <Camera className="w-6 h-6 text-emerald-500" /> Live Feed
           </h2>
-          <p className="text-xs text-slate-400 font-semibold tracking-wide">Real-time camera feed and sensor fusion</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Real-time surveillance and threat detection.</p>
         </div>
-        
-        {/* Active Alert Banner if Motion Detected */}
-        <AnimatePresence>
-          {hasActiveAlert && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, x: 20 }}
-              animate={{ opacity: 1, scale: 1, x: 0 }}
-              exit={{ opacity: 0, scale: 0.9, x: 20 }}
-              className="flex items-center gap-3 px-4 py-2 bg-red-500/20 border border-red-500/50 rounded-xl glow-red shadow-lg backdrop-blur-sm"
-            >
-              <AlertTriangle className="w-5 h-5 text-red-500 animate-pulse" />
-              <div>
-                <p className="text-xs font-black text-white tracking-widest uppercase">Intrusion Detected</p>
-                <p className="text-[10px] font-bold text-red-300">
-                  {activeDevice?.pir ? 'Motion (PIR)' : ''} 
-                  {activeDevice?.pir && activeDevice?.ultrasonic ? ' & ' : ''} 
-                  {activeDevice?.ultrasonic ? 'Proximity (Ultrasonic)' : ''}
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
 
-      {/* Main Content Grid: Top Section (Left and Right Panels) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content Grid: Top Section Camera */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        {/* Left Panel: Live Camera Feed */}
-        <div className="lg:col-span-2 space-y-4">
+        {/* Live Camera Feed */}
+        <div className="lg:col-span-3 space-y-4">
           <div 
             ref={videoContainerRef}
-            className={`relative w-full aspect-video bg-slate-950 rounded-3xl overflow-hidden border-2 transition-all duration-300 shadow-2xl flex items-center justify-center
-              ${hasActiveAlert ? 'border-red-500 glow-red' : 'border-white/5'}
+            className={`relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden border transition-all duration-300 shadow-lg flex items-center justify-center
+              ${hasActiveAlert ? 'border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.2)]' : 'border-slate-200 dark:border-white/5'}
             `}
           >
+            {/* Capture Flash Overlay */}
+            <AnimatePresence>
+              {captureFlash && (
+                <motion.div 
+                  initial={{ opacity: 1 }} animate={{ opacity: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.5 }}
+                  className="absolute inset-0 bg-white z-50 pointer-events-none"
+                />
+              )}
+            </AnimatePresence>
+
+            {/* Hidden canvas for capturing */}
+            <canvas ref={canvasRef} className="hidden" />
+
             {/* Camera Viewport */}
             {streamStatus === 'online' ? (
-              <iframe 
+              // Using img for MJPEG streams typically found on ESP32-CAM
+              <img 
+                ref={imgRef}
                 src={CAMERA_URL} 
-                title="Live Camera Stream" 
-                className={`w-full h-full border-0 ${hasActiveAlert ? 'scale-105' : 'scale-100'} transition-transform duration-700`}
-                allowFullScreen
+                alt="Live Camera Stream" 
+                crossOrigin="anonymous"
+                className={`w-full h-full object-cover border-0 ${hasActiveAlert ? 'scale-105' : 'scale-100'} transition-transform duration-700`}
+                onError={() => setStreamStatus('offline')}
               />
             ) : streamStatus === 'loading' ? (
               <div className="flex flex-col items-center gap-4">
                 <div className="w-10 h-10 border-4 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
-                <span className="text-xs font-bold text-emerald-400 tracking-widest uppercase animate-pulse">Establishing Secure Link...</span>
+                <span className="text-sm font-semibold text-emerald-500 tracking-wider">Connecting to Camera...</span>
               </div>
             ) : (
               <div className="flex flex-col items-center gap-4">
-                <WifiOff className="w-12 h-12 text-red-500/50" />
+                <WifiOff className="w-12 h-12 text-slate-400" />
                 <div className="text-center">
-                  <span className="block text-sm font-bold text-red-400 uppercase tracking-wider">Connection Lost</span>
-                  <span className="block text-xs text-slate-500 mt-1">Attempting auto-reconnect...</span>
+                  <span className="block text-sm font-semibold text-slate-900 dark:text-white">Connection Lost</span>
+                  <span className="block text-xs text-slate-500 mt-1">Attempting to reconnect...</span>
                 </div>
               </div>
             )}
@@ -156,10 +165,7 @@ export const LiveCamera = () => {
             <div className="absolute top-4 left-4 flex items-center gap-2">
               <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${streamStatus === 'online' ? 'bg-red-500 animate-pulse' : 'bg-slate-500'}`} />
-                <span className="text-[10px] font-bold text-white uppercase tracking-wider">LIVE</span>
-              </div>
-              <div className="px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-[10px] font-bold text-slate-300 uppercase">
-                CAM_01
+                <span className="text-[10px] font-bold text-white tracking-wider">LIVE</span>
               </div>
             </div>
 
@@ -172,208 +178,77 @@ export const LiveCamera = () => {
               </button>
             </div>
 
-            {/* AI Bounding Box Overlay Simulation (Appears on alert) */}
+            {/* Alert Overlay */}
             <AnimatePresence>
               {hasActiveAlert && streamStatus === 'online' && (
                 <motion.div 
-                  initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                  className="absolute inset-0 pointer-events-none"
+                  initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                  className="absolute top-4 right-4 flex items-center gap-2 px-4 py-2 bg-red-500/90 backdrop-blur-md border border-red-400 rounded-lg shadow-lg"
                 >
-                  <div className="absolute top-[20%] left-[30%] w-[40%] h-[50%] border-2 border-red-500 bg-red-500/10 transition-all duration-500 flex flex-col justify-end p-2">
-                    <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-1 self-start uppercase tracking-wider">Subject Identified (92%)</span>
-                  </div>
+                  <AlertTriangle className="w-4 h-4 text-white animate-pulse" />
+                  <span className="text-xs font-bold text-white tracking-wide">Intrusion Detected</span>
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
-
-          {/* Camera Status & Stream Health */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="glass-card p-4 rounded-2xl border border-white/5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${streamStatus === 'online' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-red-500/20 text-red-400'}`}>
-                  {streamStatus === 'online' ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+          
+          <div className="flex justify-between items-center px-2">
+             <div className="flex items-center gap-2">
+                <div className={`p-1.5 rounded-lg ${streamStatus === 'online' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'}`}>
+                  {streamStatus === 'online' ? <Wifi className="w-4 h-4" /> : <WifiOff className="w-4 h-4" />}
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stream Health</p>
-                  <p className={`text-sm font-black ${streamStatus === 'online' ? 'text-emerald-400' : 'text-red-400'} uppercase`}>{streamStatus}</p>
-                </div>
-              </div>
-              {streamStatus === 'online' && <span className="text-[10px] font-mono text-emerald-400/70">30 FPS | 720p</span>}
-            </div>
-            
-            <div className={`glass-card p-4 rounded-2xl border flex items-center justify-between transition-colors ${hasActiveAlert ? 'bg-red-500/10 border-red-500/30' : 'border-white/5'}`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${hasActiveAlert ? 'bg-red-500/20 text-red-400' : 'bg-[#4CAF50]/10 text-[#4CAF50]'}`}>
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sector Status</p>
-                  <p className={`text-sm font-black ${hasActiveAlert ? 'text-red-400' : 'text-[#4CAF50]'} uppercase`}>
-                    {hasActiveAlert ? 'Compromised' : 'Secure'}
-                  </p>
-                </div>
-              </div>
-            </div>
+                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {streamStatus === 'online' ? 'Stream Online' : 'Stream Offline'}
+                </span>
+             </div>
+             {streamStatus === 'online' && <span className="text-xs font-mono text-slate-500">30 FPS | 720p</span>}
           </div>
+
         </div>
 
-        {/* Right Panel: Sensors, Actuators & AI */}
-        <div className="space-y-4">
-          
-          {/* Active Sensors */}
-          <div className="glass-card rounded-2xl border border-white/5 p-5 space-y-4">
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-2">Hardware Telemetry</h3>
-            
-            <div className="grid grid-cols-2 gap-3">
-              {/* Connectivity */}
-              <div className={`col-span-2 flex items-center justify-between p-3 rounded-xl border ${getConnectivityColor(mqttStatus)}`}>
-                <div className="flex items-center gap-2">
-                  <Radio className="w-4 h-4" />
-                  <span className="text-xs font-bold uppercase">MQTT Node</span>
-                </div>
-                <span className="text-xs font-black uppercase">{mqttStatus}</span>
-              </div>
-
-              {/* PIR */}
-              <div className={`flex flex-col justify-center items-center gap-1.5 p-3 rounded-xl border ${getStatusColor(activeDevice?.pir)}`}>
-                <Activity className="w-5 h-5" />
-                <span className="text-[10px] font-bold uppercase">PIR Motion</span>
-                <span className="text-xs font-black">{activeDevice?.pir ? 'DETECTED' : 'CLEAR'}</span>
-              </div>
-
-              {/* Ultrasonic */}
-              <div className={`flex flex-col justify-center items-center gap-1.5 p-3 rounded-xl border ${getStatusColor(activeDevice?.ultrasonic)}`}>
-                <Gauge className="w-5 h-5" />
-                <span className="text-[10px] font-bold uppercase">Ultrasonic</span>
-                <span className="text-xs font-black">{activeDevice?.ultrasonic ? 'PROXIMITY' : 'CLEAR'}</span>
-              </div>
-
-              {/* Buzzer */}
-              <div className={`flex flex-col justify-center items-center gap-1.5 p-3 rounded-xl border ${getStatusColor(activeDevice?.buzzer)}`}>
-                <Volume2 className="w-5 h-5" />
-                <span className="text-[10px] font-bold uppercase">Buzzer</span>
-                <span className="text-xs font-black">{activeDevice?.buzzer ? 'SOUNDING' : 'OFF'}</span>
-              </div>
-
-              {/* LED */}
-              <div className={`flex flex-col justify-center items-center gap-1.5 p-3 rounded-xl border ${getStatusColor(activeDevice?.led)}`}>
-                <Lightbulb className="w-5 h-5" />
-                <span className="text-[10px] font-bold uppercase">Strobe LED</span>
-                <span className="text-xs font-black">{activeDevice?.led ? 'ACTIVE' : 'OFF'}</span>
-              </div>
+        {/* Right Panel: Detected Logs */}
+        <div className="lg:col-span-1">
+          <div className="glass-card rounded-2xl p-5 h-full flex flex-col max-h-[600px]">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-white/5 pb-4 mb-4">
+               <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                 <ImageIcon className="w-4 h-4 text-emerald-500" /> Detected Logs
+               </h3>
+               <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-full">
+                 {events.filter(e => e.imageUrl).length} captures
+               </span>
             </div>
-            
-            {activeDevice?.ultrasonic && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 p-3 bg-red-500/20 border border-red-500/40 rounded-xl flex items-center justify-between">
-                <span className="text-xs text-red-300 font-bold">Target Distance</span>
-                <span className="text-sm text-red-400 font-black animate-pulse">2.4 Meters</span>
-              </motion.div>
-            )}
-          </div>
 
-          {/* AI Ready Architecture Placeholder */}
-          <div className="glass-card rounded-2xl border border-indigo-500/20 p-5 space-y-4 bg-indigo-950/20 shadow-[0_0_20px_rgba(99,102,241,0.05)] relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-2 opacity-10">
-              <BrainCircuit className="w-24 h-24 text-indigo-400" />
-            </div>
-            
-            <h3 className="text-xs font-bold text-indigo-300 uppercase tracking-wider flex items-center gap-2">
-              <BrainCircuit className="w-4 h-4" /> AI Animal Recognition
-            </h3>
-            
-            {hasActiveAlert ? (
-              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 relative z-10">
-                <div className="flex justify-between items-center bg-black/40 p-2.5 rounded-lg border border-white/5">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Classified Type</span>
-                  <span className="text-xs text-indigo-400 font-black tracking-wider">Wild Boar</span>
-                </div>
-                <div className="flex justify-between items-center bg-black/40 p-2.5 rounded-lg border border-white/5">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Confidence</span>
-                  <div className="flex items-center gap-2">
-                    <div className="w-16 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                      <div className="w-[92%] h-full bg-indigo-500" />
+            <div className="flex-1 overflow-y-auto space-y-4 pr-1 custom-scrollbar">
+              {events.filter(e => e.imageUrl).length === 0 ? (
+                 <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-70">
+                    <Crosshair className="w-8 h-8 mb-2" />
+                    <p className="text-sm text-center">No detections yet.</p>
+                 </div>
+              ) : (
+                events.filter(e => e.imageUrl).map(event => (
+                  <div key={event._id} className="bg-white dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-white/5 overflow-hidden hover:border-emerald-500/30 transition-colors">
+                    <div className="aspect-video w-full bg-slate-100 dark:bg-black relative">
+                      <img src={event.imageUrl} alt="Detection Capture" className="w-full h-full object-cover" />
+                      <div className="absolute bottom-2 right-2 bg-black/60 backdrop-blur-md px-2 py-1 rounded text-[10px] font-medium text-white flex items-center gap-1">
+                        <Clock className="w-3 h-3" /> {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
                     </div>
-                    <span className="text-xs text-indigo-400 font-black">92%</span>
-                  </div>
-                </div>
-                <div className="flex justify-between items-center bg-black/40 p-2.5 rounded-lg border border-white/5">
-                  <span className="text-[10px] text-slate-400 font-bold uppercase">Action</span>
-                  <span className="text-xs text-amber-400 font-bold tracking-wider">Audio + Visual</span>
-                </div>
-              </motion.div>
-            ) : (
-              <div className="h-28 flex flex-col items-center justify-center text-slate-500 gap-2 relative z-10">
-                <Crosshair className="w-6 h-6 opacity-50" />
-                <p className="text-[10px] font-bold uppercase tracking-widest text-center">Awaiting Detection<br/>TensorFlow Core Idle</p>
-              </div>
-            )}
-          </div>
-          
-        </div>
-      </div>
-
-      {/* Bottom Panel: Event Logs & Detection History */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        
-        {/* Recent Alerts */}
-        <div className="glass-card rounded-2xl border border-white/5 p-5 flex flex-col h-72">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3 mb-3 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-amber-400" /> Critical Alerts
-          </h3>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-            {alerts.slice(0, 5).map(alert => (
-              <div key={alert._id} className="p-3 bg-black/30 border border-white/5 rounded-xl hover:border-white/10 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-white">{alert.message}</p>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-black tracking-wider ${alert.severity === 'HIGH' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'}`}>
-                        {alert.severity}
-                      </span>
-                      <span className="text-[10px] text-slate-500 font-mono">
-                        {new Date(alert.createdAt).toLocaleTimeString()}
-                      </span>
+                    <div className="p-3">
+                      <div className="flex justify-between items-start mb-1">
+                        <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                           Motion Detected
+                        </p>
+                        <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">92%</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         <span className="text-xs text-slate-500">Species:</span>
+                         <span className="text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded">Unknown (Wild Boar)</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-            {alerts.length === 0 && (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">No active alerts</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Detection History */}
-        <div className="glass-card rounded-2xl border border-white/5 p-5 flex flex-col h-72">
-          <h3 className="text-xs font-bold text-white uppercase tracking-wider border-b border-white/5 pb-3 mb-3 flex items-center gap-2">
-            <Clock className="w-4 h-4 text-[#4CAF50]" /> Detection Log
-          </h3>
-          <div className="flex-1 overflow-y-auto space-y-2 pr-2 custom-scrollbar">
-            {events.slice(0, 5).map(event => (
-              <div key={event._id} className="p-3 bg-black/30 border border-white/5 rounded-xl flex items-center gap-4">
-                <div className="w-12 h-12 rounded-lg bg-slate-900 border border-white/10 overflow-hidden flex-shrink-0">
-                  <img src={event.imageUrl} alt="Detection" className="w-full h-full object-cover" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs font-bold text-white uppercase">{event.sensor} Event</p>
-                    <span className="text-[10px] text-slate-500 font-mono">
-                      {new Date(event.timestamp).toLocaleTimeString()}
-                    </span>
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1">Deterrent: <span className="text-emerald-400 font-bold">{event.deterrent}</span></p>
-                </div>
-              </div>
-            ))}
-            {events.length === 0 && (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Log empty</p>
-              </div>
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
 

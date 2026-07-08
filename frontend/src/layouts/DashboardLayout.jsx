@@ -15,7 +15,7 @@ export const DashboardLayout = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0B1118] text-[#F8FAFC] flex font-sans tech-grid">
+    <div className="min-h-screen bg-[#FAFAFA] dark:bg-[#0B1118] text-slate-900 dark:text-[#F8FAFC] flex font-sans tech-grid">
       
       {/* Persistent Left Sidebar */}
       <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} />
@@ -32,7 +32,7 @@ export const DashboardLayout = () => {
         </main>
 
         {/* Modern Footer */}
-        <footer className="py-4 md:ml-72 border-t border-white/5 bg-[#0F172A]/40 backdrop-blur-md px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+        <footer className="py-4 md:ml-72 border-t border-slate-200 dark:border-white/5 bg-white/40 dark:bg-[#0F172A]/40 backdrop-blur-md px-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
           <div>
             <span>© {new Date().getFullYear()} CHITTI 4.0 Ecosystem. All rights reserved.</span>
           </div>
