@@ -156,7 +156,7 @@ export const Login = () => {
                       {mode === 'login' && (
                         <button 
                           type="button"
-                          onClick={() => setMode('forgot')}
+                          onClick={() => { setMode('forgot'); setErrorMsg(''); setSuccessMsg(''); }}
                           className="text-xs text-slate-400 hover:text-emerald-400 font-semibold cursor-pointer"
                         >
                           Forgot Key?
@@ -220,7 +220,7 @@ export const Login = () => {
               <p className="text-xs text-slate-400 font-medium">
                 New operator terminal?{' '}
                 <button 
-                  onClick={() => setMode('register')} 
+                  onClick={() => { setMode('register'); setErrorMsg(''); setSuccessMsg(''); }} 
                   className="text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer"
                 >
                   Create credentials
@@ -232,7 +232,7 @@ export const Login = () => {
               <p className="text-xs text-slate-400 font-medium">
                 Already registered?{' '}
                 <button 
-                  onClick={() => setMode('login')} 
+                  onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }} 
                   className="text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer"
                 >
                   Sign in
@@ -244,7 +244,7 @@ export const Login = () => {
               <p className="text-xs text-slate-400 font-medium">
                 Remember your password?{' '}
                 <button 
-                  onClick={() => setMode('login')} 
+                  onClick={() => { setMode('login'); setErrorMsg(''); setSuccessMsg(''); }} 
                   className="text-emerald-400 hover:text-emerald-300 font-bold cursor-pointer"
                 >
                   Back to Sign In
