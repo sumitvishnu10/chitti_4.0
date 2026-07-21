@@ -1,7 +1,9 @@
+const path = require("path");
 const express = require("express");
 const cors = require("cors");
 const deviceRoutes = require("./routes/deviceRoutes");
 const authRoutes = require("./routes/authRoutes");
+const detectionRoutes = require("./routes/detectionRoutes");
 
 const eventRoutes = require("./routes/eventRoutes");
 const alertRoutes = require("./routes/alertRoutes");
@@ -21,6 +23,11 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 app.use(express.json());
+// Serve AI detection images
+app.use(
+  "/uploads",
+  express.static(path.join(__dirname, "../../AI/detections"))
+);
 
 
 // Routes
@@ -34,6 +41,7 @@ app.use("/api/alerts", alertRoutes);
 app.use("/api/events", eventRoutes);
 app.use("/api/devices", deviceRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/detections", detectionRoutes);
 
 // Global Logging Middleware
 app.use((req, res, next) => {

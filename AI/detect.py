@@ -2,9 +2,11 @@ import cv2
 import os
 from ultralytics import YOLO
 from datetime import datetime
+from api import send_detection
 
 # Load YOLO model
 model = YOLO("yolov8n.pt")
+
 # Keep track of active detections
 active_detections = set()
 
@@ -15,10 +17,18 @@ required_classes = [
     "dog",
     "elephant"
 ]
-# Folder to save detection images
-save_folder = "AI/detections"
+
+# ==========================
+# Save Folder (UPDATED)
+# ==========================
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+save_folder = os.path.join(BASE_DIR, "detections")
 
 os.makedirs(save_folder, exist_ok=True)
+
+print("Images will be saved to:")
+print(save_folder)
+print()
 
 # Open webcam
 cap = cv2.VideoCapture(0)
@@ -28,6 +38,7 @@ if not cap.isOpened():
     exit()
 
 print("✅ Webcam started. Press 'q' to quit.")
+
 current_detections = set()
 
 while True:
@@ -39,10 +50,8 @@ while True:
 
     annotated_frame = frame.copy()
 
-    # Current detections in this frame
     current_detections = set()
 
-    # Run YOLO
     results = model(frame)
 
     for result in results:
@@ -53,7 +62,7 @@ while True:
             class_name = model.names[class_id]
             confidence = float(box.conf[0])
 
-            if class_name in required_classes:
+            if class_name in required_classes and confidence > 0.70:
 
                 current_detections.add(class_name)
 
@@ -88,32 +97,38 @@ while True:
 
                     filepath = os.path.join(save_folder, filename)
 
-                    cv2.imwrite(filepath, frame)
+                    # Save image
+                    success = cv2.imwrite(filepath, frame)
+
+                    if success:
+                        print("📸 Image saved at:")
+                        print(filepath)
+                    else:
+                        print("❌ Failed to save image")
+
                     detection_data = {
-    "animal": class_name,
-    "confidence": round(confidence * 100, 2),
-    "timestamp": datetime.now().isoformat(),
-    "image": filename,
-    "camera": "Laptop Webcam"
-}
+                        "animal": class_name,
+                        "confidence": round(confidence * 100, 2),
+                        "timestamp": datetime.now().isoformat(),
+                        "image": filename,
+                        "camera": "Laptop Webcam"
+                    }
 
                     print(f"✅ New {class_name} detected")
-                    print(f"📸 Image saved: {filename}")
+
+                    send_detection(detection_data)
 
                     active_detections.add(class_name)
 
-    # Remove objects that disappeared
+    # Remove disappeared objects
     active_detections.intersection_update(current_detections)
 
+    # Show live video
     cv2.imshow("CHITTI 4.0", annotated_frame)
 
+    # Quit
     if cv2.waitKey(1) & 0xFF == ord("q"):
         break
-print("\n========== Detection ==========")
 
-for key, value in detection_data.items():
-    print(f"{key}: {value}")
-
-print("===============================\n")
 cap.release()
 cv2.destroyAllWindows()

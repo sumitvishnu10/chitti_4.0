@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect, useContext, useCallback } from 'react';
+import React, { createContext, useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import deviceService from '../services/deviceService';
 import dashboardService from '../services/dashboardService';
 import sensorService from '../services/sensorService';
@@ -6,11 +6,11 @@ import analyticsService from '../services/analyticsService';
 import alertService from '../services/alertService';
 import systemService from '../services/systemService';
 import eventService from '../services/eventService';
+import detectionService, { getImageUrl } from '../services/detectionService';
 import { useAuth } from './AuthContext';
 
 const IoTContext = createContext(null);
 
-// Premium Mock Data Fallbacks in case backend is empty or unreachable
 const mockDevice = {
   deviceId: "CHITTI_01",
   battery: 84,
@@ -29,9 +29,9 @@ const mockDevice = {
 
 const mockSummary = {
   totalDevices: 1,
-  totalEvents: 42,
-  totalAlerts: 15,
-  unreadAlerts: 3,
+  totalEvents: 0,
+  totalAlerts: 0,
+  unreadAlerts: 0,
   systemStatus: "ONLINE"
 };
 
@@ -51,54 +51,127 @@ const mockSensorHistory = [
   { temperature: 28.5, humidity: 62, battery: 84, createdAt: new Date().toISOString() },
 ];
 
-const mockEvents = [];
-
-const mockAlerts = [];
-
-const mockAnalytics = {
-  totalEvents: 42,
-  sensorStats: [
-    { _id: "PIR", count: 24 },
-    { _id: "Ultrasonic", count: 12 },
-    { _id: "Vibration", count: 6 }
-  ],
-  statusStats: [
-    { _id: "Resolved", count: 35 },
-    { _id: "Active", count: 7 }
-  ]
-};
-
 export const IoTProvider = ({ children }) => {
   const { isAuthenticated } = useAuth();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [backendOffline, setBackendOffline] = useState(false);
   const [devices, setDevices] = useState([mockDevice]);
   const [activeDevice, setActiveDevice] = useState(mockDevice);
   const [summary, setSummary] = useState(mockSummary);
   const [health, setHealth] = useState(mockHealth);
   const [sensorHistory, setSensorHistory] = useState(mockSensorHistory);
-  const [events, setEvents] = useState(mockEvents);
-  const [alerts, setAlerts] = useState(mockAlerts);
-  const [analytics, setAnalytics] = useState(mockAnalytics);
+  const [events, setEvents] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
   
+  // Real-time Detection State
+  const [detections, setDetections] = useState([]);
+  const [latestDetection, setLatestDetection] = useState(null);
+
   // Real-time statuses
   const [mqttStatus, setMqttStatus] = useState("Connected");
   const [dbStatus, setDbStatus] = useState("Connected");
   const [lastSync, setLastSync] = useState(new Date().toLocaleTimeString());
   const [toastMessage, setToastMessage] = useState(null);
 
+  // Dynamic Statistics Calculation
+  const stats = useMemo(() => {
+    const total = detections.length;
+    const persons = detections.filter(d => {
+      const animal = (d.animal || '').toLowerCase();
+      return animal.includes('person') || animal.includes('human');
+    }).length;
+    const dogs = detections.filter(d => (d.animal || '').toLowerCase().includes('dog')).length;
+    const cows = detections.filter(d => (d.animal || '').toLowerCase().includes('cow')).length;
+    const elephants = detections.filter(d => (d.animal || '').toLowerCase().includes('elephant')).length;
+    
+    const latestTime = latestDetection
+      ? (latestDetection.timestamp || latestDetection.createdAt)
+      : (detections[0] ? (detections[0].timestamp || detections[0].createdAt) : null);
+
+    return {
+      totalDetections: total,
+      totalPersons: persons,
+      totalDogs: dogs,
+      totalCows: cows,
+      totalElephants: elephants,
+      latestDetectionTime: latestTime ? new Date(latestTime).toLocaleString() : 'N/A'
+    };
+  }, [detections, latestDetection]);
+
   const fetchIoTData = useCallback(async () => {
     if (!isAuthenticated) return;
-    
-    setLoading(true);
+
     try {
-      // 1. Fetch Summary
+      // 1. Fetch Real Detections from Backend
+      let fetchedDetections = [];
       try {
-        const sumData = await dashboardService.getSummary();
-        if (sumData && sumData.success) {
-          setSummary(sumData.summary);
+        const detRes = await detectionService.getDetections();
+        if (detRes && detRes.success && Array.isArray(detRes.data)) {
+          fetchedDetections = detRes.data;
+        } else if (Array.isArray(detRes)) {
+          fetchedDetections = detRes;
         }
-      } catch (e) {
-        console.warn("Failed fetching summary from API, using fallback.");
+        setBackendOffline(false);
+      } catch (detError) {
+        console.warn("Backend offline or detection endpoint unreachable:", detError.message);
+        setBackendOffline(true);
+      }
+
+      // Process detections if backend is reachable
+      if (fetchedDetections.length > 0) {
+        // Sort newest first
+        fetchedDetections.sort((a, b) => new Date(b.timestamp || b.createdAt) - new Date(a.timestamp || a.createdAt));
+        
+        setDetections(fetchedDetections);
+        setLatestDetection(fetchedDetections[0]);
+
+        // Map real detections into Events feed
+        const mappedEvents = fetchedDetections.map((d) => {
+          const animalName = d.animal ? (d.animal.charAt(0).toUpperCase() + d.animal.slice(1)) : 'Unknown';
+          const isPerson = (d.animal || '').toLowerCase().includes('person') || (d.animal || '').toLowerCase().includes('human');
+          return {
+            _id: d._id || Math.random().toString(),
+            deviceId: d.camera || 'Laptop Webcam',
+            sensor: isPerson ? 'Human Detection' : 'Wildlife Detection',
+            deterrent: isPerson ? 'Warning Alarm' : 'Strobe & Sound',
+            status: isPerson ? 'Human Detected' : 'Wildlife Intrusion Detected',
+            timestamp: d.timestamp || d.createdAt || new Date().toISOString(),
+            animal: animalName,
+            confidence: d.confidence,
+            camera: d.camera || 'Laptop Webcam',
+            image: d.image,
+            imageUrl: getImageUrl(d.image)
+          };
+        });
+        setEvents(mappedEvents);
+
+        // Map real detections into Alerts feed
+        const mappedAlerts = fetchedDetections.map((d) => {
+          const isPerson = (d.animal || '').toLowerCase().includes('person') || (d.animal || '').toLowerCase().includes('human');
+          const alertHeading = isPerson ? 'Human Detected' : 'Wildlife Intrusion Detected';
+          const animalName = d.animal ? (d.animal.charAt(0).toUpperCase() + d.animal.slice(1)) : 'Unknown';
+          return {
+            _id: d._id || Math.random().toString(),
+            deviceId: d.camera || 'Laptop Webcam',
+            type: isPerson ? 'HUMAN' : 'WILDLIFE',
+            message: `${alertHeading}: ${animalName} (${d.confidence ? Number(d.confidence).toFixed(2) : 0}% confidence)`,
+            severity: isPerson ? 'HIGH' : 'MEDIUM',
+            status: 'UNREAD',
+            createdAt: d.timestamp || d.createdAt || new Date().toISOString(),
+            image: getImageUrl(d.image)
+          };
+        });
+        setAlerts(mappedAlerts);
+
+        // Update summary metrics
+        setSummary({
+          totalDevices: 1,
+          totalEvents: fetchedDetections.length,
+          totalAlerts: mappedAlerts.length,
+          unreadAlerts: mappedAlerts.filter(a => a.status === 'UNREAD').length,
+          systemStatus: "ONLINE"
+        });
       }
 
       // 2. Fetch Devices
@@ -106,28 +179,10 @@ export const IoTProvider = ({ children }) => {
         const devData = await deviceService.getDevices();
         if (devData && devData.success && devData.data && devData.data.length > 0) {
           setDevices(devData.data);
-          
-          // Try to get latest device status
-          const activeRes = await deviceService.getDeviceStatus();
-          if (activeRes && activeRes.success && activeRes.data) {
-            setActiveDevice(activeRes.data);
-          } else {
-            setActiveDevice(devData.data[0]);
-          }
-        } else {
-          // If no devices exist on backend, try to create one to populate the DB
-          try {
-            const createRes = await deviceService.createDevice(mockDevice);
-            if (createRes && createRes.success) {
-              setDevices([createRes.data]);
-              setActiveDevice(createRes.data);
-            }
-          } catch (createErr) {
-            console.warn("Failed to create default device on API.");
-          }
+          setActiveDevice(devData.data[0]);
         }
       } catch (e) {
-        console.warn("Failed fetching device list from API, using fallback.");
+        console.warn("Failed fetching device list from API.");
       }
 
       // 3. Fetch Health
@@ -140,75 +195,6 @@ export const IoTProvider = ({ children }) => {
         }
       } catch (e) {
         setHealth({ ...mockHealth, status: "ERROR", database: "ERROR", mqtt: "ERROR" });
-        setMqttStatus("Disconnected");
-        setDbStatus("Disconnected");
-      }
-
-      // 4. Fetch Sensor Readings
-      try {
-        const sData = await sensorService.getSensorData();
-        if (sData && sData.success && sData.data && sData.data.length > 0) {
-          setSensorHistory(sData.data);
-        }
-      } catch (e) {
-        console.warn("Failed fetching sensor history from API.");
-      }
-
-      // 5. Fetch Events and Map to Alerts
-      try {
-        const eData = await eventService.getEvents();
-        if (eData && eData.success && eData.data) {
-          const fetchedEvents = eData.data;
-          setEvents(fetchedEvents);
-
-          // Map events to alerts
-          const mappedAlerts = fetchedEvents.map(event => {
-            let message = `${event.sensor} Triggered`;
-            if (event.sensor === 'PIR' && event.status === 'DETECTED') {
-              message = 'PIR Sensor Triggered';
-            } else if (event.sensor === 'ULTRASONIC' && event.status === 'ANIMAL_DETECTED') {
-              message = 'Animal Detected';
-            } else if (event.sensor === 'Vibration') {
-              message = 'Vibration Detected';
-            } else if (event.sensor === 'PIR') {
-              message = 'Motion Detected';
-            }
-
-            return {
-              _id: event._id,
-              deviceId: event.deviceId,
-              type: event.sensor,
-              message: message,
-              severity: "HIGH",
-              status: event.status === 'Resolved' ? 'READ' : 'UNREAD',
-              createdAt: event.timestamp || event.createdAt
-            };
-          });
-
-          // Sort alerts newest first (descending)
-          mappedAlerts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-          setAlerts(mappedAlerts);
-
-          // Update summary counts based on real data
-          setSummary(prev => ({
-            ...prev,
-            totalEvents: fetchedEvents.length,
-            totalAlerts: mappedAlerts.length,
-            unreadAlerts: mappedAlerts.filter(a => a.status === 'UNREAD').length
-          }));
-        }
-      } catch (e) {
-        console.warn("Failed fetching event logs from API:", e);
-      }
-
-      // 7. Fetch Analytics
-      try {
-        const analyticsData = await analyticsService.getAnalytics();
-        if (analyticsData && analyticsData.success) {
-          setAnalytics(analyticsData);
-        }
-      } catch (e) {
-        console.warn("Failed fetching analytics from API.");
       }
 
       setLastSync(new Date().toLocaleTimeString());
@@ -219,33 +205,23 @@ export const IoTProvider = ({ children }) => {
     }
   }, [isAuthenticated]);
 
-  // Handle Mark Alert as Read
   const handleMarkAlertRead = async (id) => {
     try {
-      // Optimistic update
       setAlerts(prev => prev.map(alert => alert._id === id ? { ...alert, status: "READ" } : alert));
-      setEvents(prev => prev.map(event => event._id === id ? { ...event, status: "Resolved" } : event));
       setSummary(prev => ({ ...prev, unreadAlerts: Math.max(0, prev.unreadAlerts - 1) }));
-      
-      await eventService.updateStatus(id, "Resolved");
     } catch (e) {
       console.error("Failed to mark alert as read:", e);
     }
   };
 
-  // Trigger Mock Live Threat Detections to demonstrate real-time notifications
-  const simulateLiveThreat = useCallback(() => {
-    // Disabled simulation as real backend integration is now active.
-  }, []);
-
-  // Set up 5s auto-refresh polling for real-time updates
+  // Set up 3-second auto-refresh polling for real-time updates as per requirement
   useEffect(() => {
     if (isAuthenticated) {
       fetchIoTData();
       
       const refreshInterval = setInterval(() => {
         fetchIoTData();
-      }, 5000); // 5 seconds auto refresh for real-time sync
+      }, 3000); // 3 seconds auto refresh
 
       return () => {
         clearInterval(refreshInterval);
@@ -256,6 +232,7 @@ export const IoTProvider = ({ children }) => {
   return (
     <IoTContext.Provider value={{
       loading,
+      backendOffline,
       devices,
       activeDevice,
       summary,
@@ -264,6 +241,9 @@ export const IoTProvider = ({ children }) => {
       events,
       alerts,
       analytics,
+      detections,
+      latestDetection,
+      stats,
       mqttStatus,
       dbStatus,
       lastSync,
@@ -271,7 +251,7 @@ export const IoTProvider = ({ children }) => {
       clearToast: () => setToastMessage(null),
       refreshData: fetchIoTData,
       markAlertRead: handleMarkAlertRead,
-      triggerSimulation: simulateLiveThreat
+      getImageUrl
     }}>
       {children}
     </IoTContext.Provider>
